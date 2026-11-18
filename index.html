@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CYBER ARENA A2 - تحدي القواعد للشباب (Super Goal)</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts: Cairo & Orbitron & Space Grotesk -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800;900&family=Orbitron:wght@700;900&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            cairo: ['Cairo', 'sans-serif'],
+            orbitron: ['Orbitron', 'sans-serif'],
+            space: ['Space Grotesk', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: radial-gradient(circle at 15% 10%, #0f172a 0%, #090d16 55%, #020617 100%);
+      color: #f8fafc;
+      min-height: 100vh;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* 3D Card Flip */
+    .card-scene {
+      perspective: 1000px;
+    }
+    .card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transform-style: preserve-3d;
+      transition: transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .card-flipped {
+      transform: rotateY(180deg);
+    }
+    .card-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      border-radius: 1rem;
+    }
+    .card-back {
+      transform: rotateY(180deg);
+    }
+
+    /* Neon Glow Animations */
+    @keyframes pulseCyan {
+      0%, 100% { box-shadow: 0 0 12px rgba(6, 182, 212, 0.35); }
+      50% { box-shadow: 0 0 24px rgba(6, 182, 212, 0.75); }
+    }
+    .neon-card-hover:hover {
+      animation: pulseCyan 1.6s infinite;
+      transform: translateY(-3px);
+    }
+
+    @keyframes shakeHard {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-8px); }
+      40% { transform: translateX(8px); }
+      60% { transform: translateX(-6px); }
+      80% { transform: translateX(6px); }
+    }
+    .shake-box {
+      animation: shakeHard 0.45s ease;
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: #06b6d4; border-radius: 999px; }
+  </style>
+</head>
+<body class="p-2 sm:p-4 lg:p-6 overflow-x-hidden">
+
+  <!-- TOP HEADER & HUD -->
+  <header class="max-w-7xl mx-auto mb-5 bg-slate-900/90 backdrop-blur-md border-2 border-cyan-500/40 rounded-3xl p-4 sm:p-5 shadow-2xl">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <!-- Brand -->
+      <div class="flex items-center gap-3.5">
+        <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-700 flex items-center justify-center text-white text-2xl sm:text-3xl shadow-lg border border-cyan-300">
+          <i class="fa-solid fa-gamepad"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-lg sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-sky-300 to-indigo-300">
+              CYBER ARENA: تحدي القواعد A2
+            </h1>
+            <span class="bg-cyan-950 text-cyan-300 border border-cyan-500/50 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full font-orbitron">
+              AGE 16+ • LEVEL A2
+            </span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-400 font-semibold mt-0.5">
+            اجمع <strong class="text-amber-400">1000 XP</strong> لاختراق الخزنة والفوز! احذر من الفخاخ المشددة واستغل الجوائز التكتيكية ⚡
+          </p>
+        </div>
+      </div>
+
+      <!-- HUD Stats -->
+      <div class="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+        <!-- Active Powerups Badges -->
+        <div id="shieldIndicator" class="hidden items-center gap-1.5 bg-sky-950/90 border-2 border-sky-400 text-sky-300 px-3 py-1.5 rounded-2xl text-xs font-black shadow">
+          <i class="fa-solid fa-shield-halved text-sky-400 animate-pulse"></i>
+          <span>درع حماية نشط (<span id="shieldCount">0</span>)</span>
+        </div>
+
+        <div id="doubleIndicator" class="hidden items-center gap-1.5 bg-amber-950/90 border-2 border-amber-400 text-amber-300 px-3 py-1.5 rounded-2xl text-xs font-black shadow">
+          <i class="fa-solid fa-bolt text-amber-400 animate-bounce"></i>
+          <span>مضاعف 2X XP نشط</span>
+        </div>
+
+        <!-- Score Box -->
+        <div class="bg-slate-950 border-2 border-cyan-500/60 px-4 py-2 rounded-2xl flex items-center gap-3">
+          <div>
+            <div class="text-[10px] text-cyan-400 font-extrabold uppercase font-orbitron">رصد النقاط (XP)</div>
+            <div class="text-xl sm:text-2xl font-black text-white font-orbitron flex items-baseline gap-1">
+              <span id="scoreDisplay">0</span>
+              <span class="text-xs text-slate-400 font-normal">/ 1000</span>
+            </div>
+          </div>
+          <div class="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-400/50 text-cyan-300 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-trophy"></i>
+          </div>
+        </div>
+
+        <!-- Streak Box -->
+        <div class="bg-slate-950 border-2 border-orange-500/50 px-3.5 py-2 rounded-2xl text-center">
+          <div class="text-[10px] text-orange-400 font-extrabold font-orbitron">STREAK</div>
+          <div class="text-lg sm:text-xl font-black text-orange-300 font-orbitron">
+            🔥 <span id="streakDisplay">0</span>
+          </div>
+        </div>
+
+        <!-- Reset Button -->
+        <button onclick="resetGame()" class="bg-slate-800 hover:bg-rose-900/60 border border-slate-700 hover:border-rose-400 text-slate-300 hover:text-rose-200 p-3 rounded-2xl transition active:scale-95" title="إعادة تشغيل التحدي">
+          <i class="fa-solid fa-rotate-right text-lg"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- XP Progress Bar -->
+    <div class="mt-4">
+      <div class="flex justify-between text-xs font-bold text-slate-400 mb-1.5">
+        <span>مستوى التقدم نحو الفوز النهائي (1000 XP)</span>
+        <span id="progressPctText" class="text-cyan-300 font-orbitron">0%</span>
+      </div>
+      <div class="w-full h-3.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800 p-0.5">
+        <div id="xpProgressBar" class="h-full bg-gradient-to-r from-cyan-500 via-blue-500 to-emerald-400 rounded-full transition-all duration-500" style="width: 0%"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CARDS BOARD (40 CARDS: 16 A2 Questions + 12 Heavy Penalties/Challenges + 12 Tactical Rewards) -->
+  <main class="max-w-7xl mx-auto bg-slate-900/85 backdrop-blur-md border-2 border-slate-800 rounded-3xl p-4 sm:p-6 shadow-2xl">
+    <!-- Legend & Filter Info -->
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-5 pb-3 border-b border-slate-800">
+      <div class="text-xs sm:text-sm font-bold text-slate-300 flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+        <span>اختر أي بطاقة من الـ 40 بطاقة المشفرة! (نسبة عالية من العقوبات والجوائز الحماسية)</span>
+      </div>
+
+      <div class="flex items-center gap-2 flex-wrap text-[11px] font-extrabold">
+        <span class="bg-cyan-950 text-cyan-300 border border-cyan-500/40 px-2.5 py-1 rounded-xl flex items-center gap-1.5">
+          <i class="fa-solid fa-code"></i> أسئلة A2 (16)
+        </span>
+        <span class="bg-amber-950 text-amber-300 border border-amber-500/40 px-2.5 py-1 rounded-xl flex items-center gap-1.5">
+          <i class="fa-solid fa-gift"></i> جوائز وصناديق (12)
+        </span>
+        <span class="bg-rose-950 text-rose-300 border border-rose-500/40 px-2.5 py-1 rounded-xl flex items-center gap-1.5">
+          <i class="fa-solid fa-skull-crossbones"></i> عقوبات وأحكام (12)
+        </span>
+      </div>
+    </div>
+
+    <!-- 40 Cards Grid -->
+    <div id="cardsGrid" class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-8 gap-2.5 sm:gap-3">
+      <!-- Injected by JS -->
+    </div>
+  </main>
+
+  <!-- ================= MODALS ================= -->
+
+  <!-- 1. A2 GRAMMAR QUESTION MODAL -->
+  <div id="questionModal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-slate-900 border-4 border-cyan-500 rounded-3xl shadow-2xl max-w-xl w-full p-5 sm:p-6 relative">
+      <div class="flex items-center justify-between gap-2 mb-3">
+        <span id="qGrammarTag" class="bg-cyan-950 border border-cyan-500/50 text-cyan-300 text-xs font-extrabold px-3 py-1 rounded-full">
+          Grammar A2
+        </span>
+        <span class="bg-slate-800 text-amber-400 text-xs font-black px-3 py-1 rounded-full font-orbitron">
+          +100 XP
+        </span>
+      </div>
+
+      <p id="qArabicHint" class="text-xs sm:text-sm text-slate-300 font-bold mb-2">
+        اختر الإجابة الصحيحة حسب القاعدة:
+      </p>
+
+      <div class="bg-slate-950 border-2 border-slate-800 rounded-2xl p-4 mb-4 text-center">
+        <p id="qSentenceText" class="text-lg sm:text-xl font-bold text-white font-space leading-relaxed" dir="ltr">
+          Question loads here...
+        </p>
+      </div>
+
+      <div id="qOptionsBox" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-4" dir="ltr">
+        <!-- Options A, B, C, D -->
+      </div>
+
+      <div id="qFeedbackBox" class="hidden p-3.5 rounded-2xl text-xs sm:text-sm font-bold mb-4 leading-relaxed"></div>
+
+      <button id="qContinueBtn" onclick="closeModal('questionModal')" class="hidden w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 text-slate-950 font-black py-3 rounded-2xl shadow-lg transition">
+        متابعة التحدي ⚡
+      </button>
+    </div>
+  </div>
+
+  <!-- 2. REWARD / LOOT CRATE MODAL -->
+  <div id="rewardModal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-slate-900 border-4 border-amber-400 rounded-3xl shadow-2xl max-w-lg w-full p-6 text-center relative">
+      <div class="w-16 h-16 mx-auto mb-3 bg-gradient-to-tr from-amber-500 to-yellow-400 text-slate-950 rounded-2xl flex items-center justify-center text-3xl shadow-lg animate-bounce">
+        <i class="fa-solid fa-gift"></i>
+      </div>
+      <span class="inline-block bg-amber-950 border border-amber-500/50 text-amber-300 text-xs font-extrabold px-3 py-1 rounded-full mb-2">
+        صندوق مكافآت وتكتيك 🎁
+      </span>
+      <h3 id="rTitle" class="text-xl font-black text-amber-300 mb-2">عنوان الجائزة</h3>
+      <p id="rDesc" class="text-sm text-slate-300 font-semibold leading-relaxed mb-5">
+        شرح الجائزة
+      </p>
+
+      <!-- Interactive Choice (Chests / Gamble) -->
+      <div id="rInteractiveArea" class="hidden mb-5"></div>
+
+      <button id="rClaimBtn" onclick="applyRewardAndClose()" class="w-full bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 text-slate-950 font-black py-3 rounded-2xl shadow-lg transition">
+        تفعيل الجائزة الآن ⚡
+      </button>
+    </div>
+  </div>
+
+  <!-- 3. HEAVY PENALTY & CHALLENGE MODAL -->
+  <div id="penaltyModal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4">
+    <div id="penaltyCardContainer" class="bg-slate-900 border-4 border-rose-600 rounded-3xl shadow-2xl max-w-lg w-full p-6 text-center relative">
+      <div class="w-16 h-16 mx-auto mb-3 bg-gradient-to-tr from-rose-600 to-red-500 text-white rounded-2xl flex items-center justify-center text-3xl shadow-lg">
+        <i class="fa-solid fa-skull-crossbones"></i>
+      </div>
+      <span id="pTypeBadge" class="inline-block bg-rose-950 border border-rose-500/60 text-rose-300 text-xs font-extrabold px-3 py-1 rounded-full mb-2">
+        فخ وعقوبة مشددة ⚠️
+      </span>
+      <h3 id="pTitle" class="text-xl font-black text-rose-400 mb-2">عنوان العقوبة</h3>
+      <p id="pDesc" class="text-sm text-slate-200 font-semibold leading-relaxed mb-4 bg-slate-950 p-4 rounded-2xl border border-rose-500/30">
+        وصف العقوبة
+      </p>
+
+      <!-- Shield Block Banner -->
+      <div id="pShieldBlockedBox" class="hidden mb-4 p-3.5 rounded-2xl bg-sky-950 border-2 border-sky-400 text-sky-200 text-xs sm:text-sm font-black">
+        🛡️ درع الحماية الإلكتروني تصدى للعقوبة بالكامل! لم تخسر أي نقطة!
+      </div>
+
+      <!-- Escape Quiz / Action Challenge Box -->
+      <div id="pChallengeArea" class="hidden mb-4 text-right bg-slate-950 p-4 rounded-2xl border border-amber-500/40">
+        <p id="pChallengePrompt" class="text-xs sm:text-sm font-bold text-amber-300 mb-3"></p>
+        <div id="pChallengeOptions" class="grid grid-cols-1 gap-2" dir="ltr"></div>
+      </div>
+
+      <div id="pActionButtons" class="flex flex-col sm:flex-row gap-2.5"></div>
+    </div>
+  </div>
+
+  <!-- 4. VICTORY MODAL -->
+  <div id="victoryModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border-4 border-emerald-400 rounded-3xl shadow-2xl max-w-md w-full p-7 text-center">
+      <div class="text-6xl mb-3">🏆⚡🔥</div>
+      <h2 class="text-2xl sm:text-3xl font-black text-emerald-400 font-orbitron mb-2">MISSION ACCOMPLISHED!</h2>
+      <p class="text-base font-bold text-white mb-2">
+        بطل الـ A2! لقد تجاوزت العقوبات وجمعت <span id="finalScoreVal" class="text-amber-400 font-orbitron">1000</span> XP!
+      </p>
+      <p class="text-xs text-slate-400 font-semibold mb-6 leading-relaxed">
+        أثبتّ إتقانك لقواعد Super Goal (Adverbs of Frequency, Both/Neither, Past & Used to, Going to/Will, Time Clauses, Quantifiers, Reflexive Pronouns).
+      </p>
+      <button onclick="resetGame()" class="w-full bg-gradient-to-r from-emerald-400 to-cyan-500 hover:from-emerald-300 text-slate-950 font-black py-3.5 rounded-2xl shadow-lg transition font-orbitron">
+        PLAY AGAIN 🔄
+      </button>
+    </div>
+  </div>
+
+  <!-- ================= JAVASCRIPT ENGINE ================= -->
+  <script>
+    // Web Audio Sound Synthesizer
+    const SFX = {
+      ctx: null,
+      init() {
+        if (!this.ctx) {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (AC) this.ctx = new AC();
+        }
+      },
+      play(type) {
+        try {
+          this.init();
+          if (!this.ctx) return;
+          if (this.ctx.state === 'suspended') this.ctx.resume();
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          if (type === 'flip') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(380, now);
+            osc.frequency.exponentialRampToValueAtTime(620, now + 0.08);
+            gain.gain.setValueAtTime(0.14, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+            osc.start(now);
+            osc.stop(now + 0.09);
+          } else if (type === 'correct') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(523.25, now);
+            osc.frequency.setValueAtTime(659.25, now + 0.08);
+            osc.frequency.setValueAtTime(783.99, now + 0.16);
+            osc.frequency.setValueAtTime(1046.5, now + 0.24);
+            gain.gain.setValueAtTime(0.24, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+            osc.start(now);
+            osc.stop(now + 0.5);
+          } else if (type === 'penalty') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(190, now);
+            osc.frequency.linearRampToValueAtTime(110, now + 0.35);
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+            osc.start(now);
+            osc.stop(now + 0.4);
+          } else if (type === 'reward') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(587.33, now);
+            osc.frequency.setValueAtTime(880, now + 0.12);
+            osc.frequency.setValueAtTime(1174.66, now + 0.24);
+            gain.gain.setValueAtTime(0.22, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+            osc.start(now);
+            osc.stop(now + 0.5);
+          } else if (type === 'win') {
+            [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => {
+              const o = this.ctx.createOscillator();
+              const g = this.ctx.createGain();
+              o.connect(g);
+              g.connect(this.ctx.destination);
+              o.frequency.setValueAtTime(f, now + i * 0.11);
+              g.gain.setValueAtTime(0.22, now + i * 0.11);
+              g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.11 + 0.4);
+              o.start(now + i * 0.11);
+              o.stop(now + i * 0.11 + 0.4);
+            });
+          }
+        } catch (e) {}
+      }
+    };
+
+    // =========================================================================
+    // 1. 16 A2-LEVEL QUESTIONS FROM THE UPLOADED BOOK PAGES (Super Goal)
+    // =========================================================================
+    const A2_QUESTIONS = [
+      // Page 5: Adverbs of Frequency & How Often / How Long
+      {
+        tag: "Adverbs of Frequency • صفحة 5",
+        arabic: "ظروف التكرار تأتي قبل الفعل الأساسي وبعد فعل الكينونة (be):",
+        sentence: "I ______ eat junk food, so I am ______ a salad-and-fruit person.",
+        options: [
+          "rarely / usually",
+          "usually / rarely",
+          "always / never",
+          "never / always"
+        ],
+        correct: 0,
+        exp: "نادرًا ما أتناول الوجبات السريعة (rarely)، لذا أنا عادةً شخص يفضل السلطة والفواكه (usually)."
+      },
+      {
+        tag: "Questions with How Often / How Long • صفحة 5",
+        arabic: "اختر أداة الاستفهام المناسبة للسؤال عن المدة الزمنية (ساعتين كل ليلة):",
+        sentence: "Q: ______ do you spend on your homework? — A: About 2 hours every night.",
+        options: ["How often", "How long", "How many", "Who"],
+        correct: 1,
+        exp: "نستخدم (How long) للسؤال عن طول المدة الزمنية، بينما (How often) لعدد مرات التكرار."
+      },
+      // Page 18: All, Both, Neither, None
+      {
+        tag: "Both / Neither • صفحة 18",
+        arabic: "كلمة (Neither) تعني (لا أحد منهما) ويأتي بعدها فعل مفرد:",
+        sentence: "There are two teachers here. Neither of them ______ math.",
+        options: ["teach", "teaches", "teaching", "are teaching"],
+        correct: 1,
+        exp: "بعد (Neither of them) نستخدم الفعل بصيغة المفرد (teaches / is)."
+      },
+      {
+        tag: "All / Both Placement • صفحة 18",
+        arabic: "تأتي (Both / All) بعد الفعل المساعد (be / can) وقبل الفعل الأساسي:",
+        sentence: "They ______ speak English fluently because they practice every day.",
+        options: ["all can", "can all", "both are", "are both"],
+        correct: 1,
+        exp: "الترتيب الصحيح مع الفعل المساعد (can) هو: They can all speak English."
+      },
+      // Page 23: Simple Past, Be + Born, Passive & Used to
+      {
+        tag: "Expressions with the Passive • صفحة 23",
+        arabic: "استخدام المبني للمجهول في الماضي (was / were + past participle):",
+        sentence: "Michael ______ in Montreal, and his parents ______ in Tabuk.",
+        options: [
+          "was raised / were married",
+          "were raised / was married",
+          "raised / married",
+          "is raising / are marrying"
+        ],
+        correct: 0,
+        exp: "المفرد Michael يأخذ (was raised) والجمع his parents يأخذ (were married)."
+      },
+      {
+        tag: "Used to (Past Habits) • صفحة 23",
+        arabic: "في نفي (Used to) نحذف حرف الـ d فتصبح (didn't use to):",
+        sentence: "When I was little, I ______ play video games all day.",
+        options: ["didn't used to", "didn't use to", "not used to", "wasn't use to"],
+        correct: 1,
+        exp: "بعد (didn't) يعود الفعل إلى مصدره بدون d: (didn't use to)."
+      },
+      // Page 34: Time Expressions for the Past & When Clauses
+      {
+        tag: "Past Time Expressions • صفحة 34",
+        arabic: "استخدام تعبيرات الماضي (Last / Ago / In):",
+        sentence: "I'm in grade 9 now. ______ I was in grade 8, and two years ______ I was in grade 7.",
+        options: ["Ago / last", "Last year / ago", "Yesterday / in", "Last / yesterday"],
+        correct: 1,
+        exp: "نقول (Last year) في بداية الجملة، وتأتي كلمة (ago) بعد المدة الزمنية (two years ago)."
+      },
+      {
+        tag: "When Clauses (Past) • صفحة 34",
+        arabic: "الربط باستخدام (When) في الزمن الماضي:",
+        sentence: "They didn't go to school ______ they were four years old.",
+        options: ["while", "when", "until", "so"],
+        correct: 1,
+        exp: "نستخدم (when) للإشارة إلى مرحلة عمرية في الماضي: when they were four years old."
+      },
+      // Page 39: Present Progressive, Going to vs Will, Infinitives of Purpose
+      {
+        tag: "Future: Going to vs Will • صفحة 39",
+        arabic: "نستخدم (will) مع كلمات عدم التأكد مثل (maybe / probably):",
+        sentence: "I don't have definite plans yet. Maybe I ______ stay with my friends.",
+        options: ["am going to", "'ll (will)", "going to", "am staying"],
+        correct: 1,
+        exp: "وجود كلمة (Maybe) يدل على خطة غير مؤكدة، فنستخدم معها (will / 'll)."
+      },
+      {
+        tag: "Infinitives of Purpose • صفحة 39",
+        arabic: "استخدام (to + المصدر) لبيان الغرض أو السبب من الفعل:",
+        sentence: "He got up early at 5:00 AM ______ the plane to Jeddah.",
+        options: ["for catch", "to catch", "catching", "caught"],
+        correct: 1,
+        exp: "لبيان سبب القيام بالفعل نستخدم المصدر مسبوقاً بـ to: (to catch the plane)."
+      },
+      // Page 51: Time Clauses & Prepositions of Movement
+      {
+        tag: "Time Clauses (Present for Future) • صفحة 51",
+        arabic: "لا نستخدم صيغة المستقبل (will) داخل الجملة الزمنية بعد (as soon as / when / after):",
+        sentence: "As soon as we ______ at the airport, we're going straight to the hotel.",
+        options: ["will arrive", "arrive", "arriving", "arrived"],
+        correct: 1,
+        exp: "بعد أدوات الربط الزمنية (As soon as / when) نستخدم المضارع البسيط (arrive) حتى لو كان المعنى مستقبلاً."
+      },
+      {
+        tag: "Prepositions of Movement • صفحة 51",
+        arabic: "حروف الجر الدالة على الحركة (across / through / out of / towards):",
+        sentence: "The train went ______ the long dark tunnel under the mountain.",
+        options: ["across", "through", "on", "between"],
+        correct: 1,
+        exp: "نستخدم (through) للحركة عبر نفق أو مكان مغلق من الداخل (through the tunnel)."
+      },
+      // Page 64: Expressions of Quantity & Indefinite Pronouns & Sequence Words
+      {
+        tag: "Expressions of Quantity • صفحة 64",
+        arabic: "الفرق بين (How many) للمعدود و (How much) لغير المعدود:",
+        sentence: "______ bananas do you eat a week, and ______ milk do you drink?",
+        options: [
+          "How much / How many",
+          "How many / How much",
+          "A little / A few",
+          "Many / A few"
+        ],
+        correct: 1,
+        exp: "الموز (bananas) جمع معدود يأخذ (How many)، والحليب (milk) غير معدود يأخذ (How much)."
+      },
+      {
+        tag: "Pronouns: Something, Anything, Nothing • صفحة 64",
+        arabic: "نستخدم (anything) في الجمل المنفية مع (don't / didn't):",
+        sentence: "I'm really hungry because I don't have ______ for lunch today.",
+        options: ["something", "nothing", "anything", "everything"],
+        correct: 2,
+        exp: "مع النفي (don't have) نستخدم (anything)، أما مع الإثبات فنستخدم (nothing) أو (something)."
+      },
+      // Page 76: Reflexive Pronouns & Because vs So
+      {
+        tag: "Reflexive Pronouns • صفحة 76",
+        arabic: "الضمائر الانعكاسية عندما يكون الفاعل والمفعول به نفس الشخص:",
+        sentence: "Be careful with that sharp knife! Nawal cut ______ while peeling potatoes.",
+        options: ["himself", "herself", "myself", "themselves"],
+        correct: 1,
+        exp: "الفاعل (Nawal) مفرد مؤنث، لذا الضمير الانعكاسي المناسب هو (herself)."
+      },
+      {
+        tag: "Because vs So • صفحة 76",
+        arabic: "الفرق بين (because) للسبب و (so) للنتيجة:",
+        sentence: "We didn't have anything to eat at home, ______ we went out for dinner.",
+        options: ["because", "so", "while", "until"],
+        correct: 1,
+        exp: "الجملة الثانية (ذهبنا للعشاء بالخارج) هي نتيجة للجملة الأولى، لذا نستخدم (so)."
+      }
+    ];
+
+    // =========================================================================
+    // 2. 12 HEAVY PENALTIES & LIVE CHALLENGES (عقوبات وأحكام أكثر للشباب!)
+    // =========================================================================
+    const PENALTIES_12 = [
+      {
+        title: "هجوم الفيروس المدمر (-150 XP) ☠️",
+        desc: "اخترق فيروس خبيث نظامك وسحب 150 نقطة فوراً! إلا إذا كان لديك درع حماية نشط.",
+        mode: "direct",
+        penalty: 150
+      },
+      {
+        title: "فخ القواعد الخاطف (أجب أو اخسر 150 XP) ⚡",
+        desc: "تحدي إنقاذ إجباري! أجب على سؤال الضمير الانعكاسي خلال ثوانٍ لتنجو من خصم 150 نقطة:",
+        mode: "escape_quiz",
+        penalty: 150,
+        quiz: {
+          prompt: "اختر الضمير الانعكاسي الصحيح: 'I made the whole project ______ without any help.'",
+          options: ["myself", "himself", "ourselves"],
+          correct: 0
+        }
+      },
+      {
+        title: "ضريبة السايبر الكبرى (-200 XP) 💸",
+        desc: "عقوبة قاسية! خصم 200 نقطة كاملة من رصيدك وتصفير عداد الـ Streak!",
+        mode: "direct_and_streak",
+        penalty: 200
+      },
+      {
+        title: "حكم التحدي البدني: 15 تمرين ضغط (Push-ups)! 💪",
+        desc: "حكم رياضي للشباب! قم بعمل 15 تمرين ضغط أو 20 تمرين سكوات أمام الشاشة خلال 30 ثانية لتفادي خصم 150 نقطة!",
+        mode: "action_challenge",
+        penalty: 150
+      },
+      {
+        title: "فخ الزمن الماضي (أجب أو اخسر 100 XP) ⏳",
+        desc: "أثبت معرفتك بقاعدة (Used to) لتجنب خصم 100 نقطة:",
+        mode: "escape_quiz",
+        penalty: 100,
+        quiz: {
+          prompt: "أي جملة صحيحة قواعدياً؟",
+          options: [
+            "He didn't use to live in Riyadh.",
+            "He didn't used to live in Riyadh.",
+            "He wasn't use to live in Riyadh."
+          ],
+          correct: 0
+        }
+      },
+      {
+        title: "تصفير عداد الحماس + خصم 100 XP 🧊",
+        desc: "موجة تجميد مفاجئة! تخسر 100 نقطة وينخفض عداد الـ Streak إلى الصفر.",
+        mode: "direct_and_streak",
+        penalty: 100
+      },
+      {
+        title: "حكم التحدث السريع بالإنجليزية (30 ثانية) 🎙️",
+        desc: "تحدث باللغة الإنجليزية لمدة 30 ثانية متواصلة عن خططك في عطلة نهاية الأسبوع مستخدماً (going to / will) لتفادي خصم 150 XP!",
+        mode: "action_challenge",
+        penalty: 150
+      },
+      {
+        title: "فخ أدوات الربط (Because vs So) 🔗",
+        desc: "أجب بدقة لتفادي عقوبة -150 نقطة:",
+        mode: "escape_quiz",
+        penalty: 150,
+        quiz: {
+          prompt: "You should eat a good breakfast ______ it gives you energy.",
+          options: ["so", "because", "until"],
+          correct: 1
+        }
+      },
+      {
+        title: "كمين القراصنة (-150 XP) 🏴‍☠️",
+        desc: "سرق قراصنة البيانات 150 نقطة من خزنتك! لا مفر إلا بدرع الحماية.",
+        mode: "direct",
+        penalty: 150
+      },
+      {
+        title: "حكم الجمل التسلسلية (Sequence Words) 🧑‍🍳",
+        desc: "اشرح للمعلم خطوات تحضير وجبتك المفضلة بالإنجليزية مستخدماً الكلمات الأربع: (First, Then, After that, Finally) لتنجو من خصم 150 XP!",
+        mode: "action_challenge",
+        penalty: 150
+      },
+      {
+        title: "فخ حروف الحركة (Prepositions of Movement) 🚆",
+        desc: "حل اللغز الحركي السريع أو اخسر 100 نقطة:",
+        mode: "escape_quiz",
+        penalty: 100,
+        quiz: {
+          prompt: "He walked ______ the bridge to reach the other side of the river.",
+          options: ["across", "into", "out of"],
+          correct: 0
+        }
+      },
+      {
+        title: "عقوبة الخطأ الفادح (-250 XP) 🚨",
+        desc: "أخطر فخ في اللوحة! يخصم 250 نقطة كاملة إذا لم يكن لديك درع حماية!",
+        mode: "direct",
+        penalty: 250
+      }
+    ];
+
+    // =========================================================================
+    // 3. 12 TACTICAL REWARDS & LOOT CRATES (جوائز وصناديق حماسية!)
+    // =========================================================================
+    const REWARDS_12 = [
+      {
+        title: "صندوق الاختراق الذهبي (+200 XP) 💎",
+        desc: "مكافأة ضخمة! حصلت على +200 نقطة XP تضاف مباشرة لرصيدك!",
+        type: "xp",
+        amount: 200
+      },
+      {
+        title: "درع التيتانيوم الإلكتروني 🛡️",
+        desc: "حصلت على درع حماية متطور يصد تلقائياً أي عقوبة أو فخ قادم!",
+        type: "shield"
+      },
+      {
+        title: "مضاعف الطاقة (2X XP Booster) ⚡",
+        desc: "إجابتك الصحيحة على السؤال القادم ستمنحك 200 نقطة بدلاً من 100 نقطة!",
+        type: "double"
+      },
+      {
+        title: "صندوق المخاطرة للشباب (اختر 1 من 2) 🎲",
+        desc: "أمامك خياران مشفران: أحدهما يمنحك +300 XP والآخر يمنحك درع حماية + 100 XP! اختر صندوقك:",
+        type: "two_boxes"
+      },
+      {
+        title: "مكافأة السلسلة النارية (+150 XP & Streak +2) 🔥",
+        desc: "دفعة حماسية! +150 نقطة وزيادة عداد الـ Streak درجتين!",
+        type: "xp_and_streak",
+        amount: 150
+      },
+      {
+        title: "كنز السايبر الأسطوري (+250 XP) 🏆",
+        desc: "ضربة حظ خرافية! +250 نقطة XP تقربك بقوة من اختراق الخزنة!",
+        type: "xp",
+        amount: 250
+      },
+      {
+        title: "حزمة النجاة الكاملة (درع + 150 XP) 🛡️⚡",
+        desc: "مكافأة مزدوجة: درع حماية ضد العقوبات + 150 نقطة فورية!",
+        type: "shield_and_xp",
+        amount: 150
+      },
+      {
+        title: "شريحة البيانات السريعة (+150 XP) 💾",
+        desc: "فككت تشفير ملف سري وحصلت على +150 نقطة XP!",
+        type: "xp",
+        amount: 150
+      },
+      {
+        title: "درعان إلكترونيان دفعة واحدة! 🛡️🛡️",
+        desc: "حماية مضاعفة! حصلت على درعين لصد أخطر العقوبات القادمة!",
+        type: "double_shield"
+      },
+      {
+        title: "مكافأة القناص (+200 XP) 🎯",
+        desc: "تصويب دقيق نحو القمة! أضف +200 نقطة إلى رصيدك الآن.",
+        type: "xp",
+        amount: 200
+      },
+      {
+        title: "صندوق المفاجآت المزدوج (اختر صندوقاً) 📦",
+        desc: "اختر بين الصندوق الأزرق أو الصندوق البنفسجي لكشف جائزتك الفورية:",
+        type: "two_boxes"
+      },
+      {
+        title: "دفعة التيربو النهائية (+300 XP) 🚀",
+        desc: "أكبر جائزة مباشرة في اللعبة! +300 نقطة XP تضاف لرصيدك حالاً!",
+        type: "xp",
+        amount: 300
+      }
+    ];
+
+    // =========================================================================
+    // 4. GAME STATE & ENGINE
+    // =========================================================================
+    let score = 0;
+    const TARGET_SCORE = 1000;
+    let streak = 0;
+    let shields = 0;
+    let doubleNext = false;
+    let deck = [];
+
+    let activeQuestion = null;
+    let activeReward = null;
+    let activePenalty = null;
+    let boxPicked = false;
+
+    function buildDeck() {
+      const list = [];
+      A2_QUESTIONS.forEach((q, i) => list.push({ id: `q-${i}`, type: 'question', data: q, opened: false }));
+      PENALTIES_12.forEach((p, i) => list.push({ id: `p-${i}`, type: 'penalty', data: p, opened: false }));
+      REWARDS_12.forEach((r, i) => list.push({ id: `r-${i}`, type: 'reward', data: r, opened: false }));
+
+      // Shuffle
+      for (let i = list.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [list[i], list[j]] = [list[j], list[i]];
+      }
+      return list;
+    }
+
+    function renderGrid() {
+      const grid = document.getElementById('cardsGrid');
+      grid.innerHTML = '';
+
+      deck.forEach((card, idx) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'card-scene aspect-[3/4] cursor-pointer';
+
+        let backTheme = '';
+        let backIcon = '';
+        let backText = '';
+
+        if (card.type === 'question') {
+          backTheme = 'bg-cyan-950/90 border-cyan-400 text-cyan-200';
+          backIcon = 'fa-code text-cyan-400';
+          backText = 'سؤال A2';
+        } else if (card.type === 'reward') {
+          backTheme = 'bg-amber-950/90 border-amber-400 text-amber-200';
+          backIcon = 'fa-gift text-amber-400';
+          backText = 'جائزة';
+        } else {
+          backTheme = 'bg-rose-950/90 border-rose-500 text-rose-200';
+          backIcon = 'fa-skull-crossbones text-rose-500';
+          backText = 'عقوبة';
+        }
+
+        wrap.innerHTML = `
+          <div id="card-inner-${idx}" class="card-inner rounded-2xl ${card.opened ? 'card-flipped pointer-events-none' : 'neon-card-hover'}">
+            <!-- Front Mystery Face -->
+            <div class="card-face bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 border-2 border-cyan-500/40 flex flex-col items-center justify-between p-2 shadow-lg">
+              <div class="w-full flex justify-between items-center text-[10px] font-orbitron text-cyan-400/80">
+                <span>#${idx + 1}</span>
+                <i class="fa-solid fa-microchip"></i>
+              </div>
+              <div class="flex flex-col items-center">
+                <i class="fa-solid fa-bolt text-2xl sm:text-3xl text-cyan-400 drop-shadow"></i>
+                <span class="text-[9px] font-orbitron font-bold text-slate-400 mt-1">CYBER</span>
+              </div>
+              <div class="w-full bg-cyan-950/80 border border-cyan-500/30 rounded-lg py-0.5 text-center text-[9px] font-bold text-cyan-300">
+                افتح
+              </div>
+            </div>
+
+            <!-- Back Revealed Face -->
+            <div class="card-face card-back border-2 ${backTheme} flex flex-col items-center justify-center p-1.5 text-center shadow-xl">
+              <i class="fa-solid ${backIcon} text-xl sm:text-2xl mb-1"></i>
+              <span class="text-[10px] sm:text-xs font-black">${backText}</span>
+            </div>
+          </div>
+        `;
+
+        if (!card.opened) {
+          wrap.addEventListener('click', () => handleCardSelect(idx));
+        }
+
+        grid.appendChild(wrap);
+      });
+
+      updateHUD();
+    }
+
+    function handleCardSelect(idx) {
+      const card = deck[idx];
+      if (card.opened) return;
+
+      SFX.play('flip');
+      card.opened = true;
+      const el = document.getElementById(`card-inner-${idx}`);
+      if (el) {
+        el.classList.remove('neon-card-hover');
+        el.classList.add('card-flipped');
+      }
+
+      setTimeout(() => {
+        if (card.type === 'question') openQuestion(card.data);
+        else if (card.type === 'reward') openReward(card.data);
+        else openPenalty(card.data);
+      }, 320);
+    }
+
+    // =========================================================================
+    // QUESTION LOGIC
+    // =========================================================================
+    function openQuestion(qData) {
+      activeQuestion = qData;
+      document.getElementById('qGrammarTag').textContent = qData.tag;
+      document.getElementById('qArabicHint').textContent = qData.arabic;
+      document.getElementById('qSentenceText').textContent = qData.sentence;
+
+      const optBox = document.getElementById('qOptionsBox');
+      optBox.innerHTML = '';
+
+      const fb = document.getElementById('qFeedbackBox');
+      fb.className = 'hidden p-3.5 rounded-2xl text-xs sm:text-sm font-bold mb-4 leading-relaxed';
+      document.getElementById('qContinueBtn').classList.add('hidden');
+
+      const letters = ['A', 'B', 'C', 'D'];
+      qData.options.forEach((opt, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'q-opt bg-slate-950 hover:bg-slate-800 border-2 border-slate-700 hover:border-cyan-400 text-slate-100 font-bold py-3 px-3.5 rounded-2xl text-sm transition flex items-center gap-2.5 text-left';
+        btn.innerHTML = `
+          <span class="w-7 h-7 rounded-lg bg-cyan-950 text-cyan-300 border border-cyan-500/40 font-orbitron font-black flex items-center justify-center shrink-0">${letters[i]}</span>
+          <span>${opt}</span>
+        `;
+        btn.onclick = () => checkQuestionAnswer(i, btn);
+        optBox.appendChild(btn);
+      });
+
+      showModal('questionModal');
+    }
+
+    function checkQuestionAnswer(chosen, btnEl) {
+      const btns = document.querySelectorAll('.q-opt');
+      btns.forEach(b => b.classList.add('pointer-events-none'));
+
+      const fb = document.getElementById('qFeedbackBox');
+      fb.classList.remove('hidden');
+
+      if (chosen === activeQuestion.correct) {
+        SFX.play('correct');
+        btnEl.classList.remove('bg-slate-950', 'border-slate-700');
+        btnEl.classList.add('bg-emerald-600', 'border-emerald-400', 'text-white');
+
+        streak++;
+        let gained = 100;
+        if (doubleNext) {
+          gained = 200;
+          doubleNext = false;
+        }
+        score += gained;
+
+        fb.className = 'p-3.5 rounded-2xl text-xs sm:text-sm font-bold mb-4 leading-relaxed bg-emerald-950 border border-emerald-500 text-emerald-200';
+        fb.innerHTML = `🔥 إجابة صحيحة (+${gained} XP)! <br><span class="text-xs text-emerald-300 font-semibold">${activeQuestion.exp}</span>`;
+      } else {
+        SFX.play('penalty');
+        btnEl.classList.remove('bg-slate-950', 'border-slate-700');
+        btnEl.classList.add('bg-rose-600', 'border-rose-400', 'text-white');
+
+        btns[activeQuestion.correct].classList.remove('bg-slate-950', 'border-slate-700');
+        btns[activeQuestion.correct].classList.add('bg-emerald-900', 'border-emerald-400', 'text-emerald-100');
+
+        streak = 0;
+        if (doubleNext) doubleNext = false;
+
+        fb.className = 'p-3.5 rounded-2xl text-xs sm:text-sm font-bold mb-4 leading-relaxed bg-rose-950 border border-rose-500 text-rose-200';
+        fb.innerHTML = `❌ إجابة خاطئة! الإجابة الصحيحة موضحة بالأخضر.<br><span class="text-xs text-rose-300 font-semibold">${activeQuestion.exp}</span>`;
+      }
+
+      updateHUD();
+      document.getElementById('qContinueBtn').classList.remove('hidden');
+    }
+
+    // =========================================================================
+    // REWARD LOGIC
+    // =========================================================================
+    function openReward(rData) {
+      activeReward = rData;
+      boxPicked = false;
+      SFX.play('reward');
+
+      document.getElementById('rTitle').textContent = rData.title;
+      document.getElementById('rDesc').textContent = rData.desc;
+
+      const area = document.getElementById('rInteractiveArea');
+      const claimBtn = document.getElementById('rClaimBtn');
+
+      if (rData.type === 'two_boxes') {
+        area.classList.remove('hidden');
+        claimBtn.classList.add('hidden');
+        area.innerHTML = `
+          <div class="grid grid-cols-2 gap-3">
+            <button onclick="openMysteryBox(1)" class="p-4 rounded-2xl bg-slate-950 border-2 border-cyan-400 hover:bg-cyan-950/60 transition flex flex-col items-center gap-1.5">
+              <span class="text-3xl">📦</span>
+              <span class="font-black text-xs text-cyan-300">الصندوق الأزرق #1</span>
+            </button>
+            <button onclick="openMysteryBox(2)" class="p-4 rounded-2xl bg-slate-950 border-2 border-amber-400 hover:bg-amber-950/60 transition flex flex-col items-center gap-1.5">
+              <span class="text-3xl">🎁</span>
+              <span class="font-black text-xs text-amber-300">الصندوق الذهبي #2</span>
+            </button>
+          </div>
+        `;
+      } else {
+        area.classList.add('hidden');
+        claimBtn.classList.remove('hidden');
+      }
+
+      showModal('rewardModal');
+    }
+
+    function openMysteryBox(choice) {
+      if (boxPicked) return;
+      boxPicked = true;
+      SFX.play('correct');
+
+      const area = document.getElementById('rInteractiveArea');
+      if (choice === 1) {
+        score += 300;
+        area.innerHTML = `<div class="p-4 rounded-2xl bg-emerald-950 border border-emerald-400 text-emerald-200 font-black text-sm">🎉 ضربة معلم! ربحت +300 XP فورية!</div>`;
+      } else {
+        shields += 1;
+        score += 100;
+        area.innerHTML = `<div class="p-4 rounded-2xl bg-sky-950 border border-sky-400 text-sky-200 font-black text-sm">🛡️ ممتاز! حصلت على درع حماية إلكتروني + 100 XP!</div>`;
+      }
+      updateHUD();
+      document.getElementById('rClaimBtn').classList.remove('hidden');
+    }
+
+    function applyRewardAndClose() {
+      const r = activeReward;
+      if (r.type === 'xp') {
+        score += r.amount;
+        showToast(`+${r.amount} XP أضيفت لرصيدك!`);
+      } else if (r.type === 'shield') {
+        shields += 1;
+        showToast('تم تفعيل درع حماية إلكتروني 🛡️');
+      } else if (r.type === 'double_shield') {
+        shields += 2;
+        showToast('تمت إضافة درعي حماية دفعة واحدة! 🛡️🛡️');
+      } else if (r.type === 'double') {
+        doubleNext = true;
+        showToast('مضاعف 2X XP جاهز للسؤال القادم ⚡');
+      } else if (r.type === 'xp_and_streak') {
+        score += r.amount;
+        streak += 2;
+        showToast(`+${r.amount} XP وزيادة الـ Streak!`);
+      } else if (r.type === 'shield_and_xp') {
+        shields += 1;
+        score += r.amount;
+        showToast(`درع حماية + ${r.amount} XP!`);
+      }
+
+      updateHUD();
+      closeModal('rewardModal');
+      checkWinCondition();
+    }
+
+    // =========================================================================
+    // PENALTY & CHALLENGE LOGIC
+    // =========================================================================
+    function openPenalty(pData) {
+      activePenalty = pData;
+      SFX.play('penalty');
+
+      const container = document.getElementById('penaltyCardContainer');
+      container.classList.remove('shake-box');
+      void container.offsetWidth;
+      container.classList.add('shake-box');
+
+      document.getElementById('pTitle').textContent = pData.title;
+      document.getElementById('pDesc').textContent = pData.desc;
+
+      const shieldBox = document.getElementById('pShieldBlockedBox');
+      const challengeArea = document.getElementById('pChallengeArea');
+      const actionBtns = document.getElementById('pActionButtons');
+
+      shieldBox.classList.add('hidden');
+      challengeArea.classList.add('hidden');
+      actionBtns.innerHTML = '';
+
+      // Check Shield First!
+      if (shields > 0) {
+        shields--;
+        updateHUD();
+        shieldBox.classList.remove('hidden');
+        actionBtns.innerHTML = `
+          <button onclick="closeModal('penaltyModal')" class="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-black py-3 rounded-2xl transition">
+            رائع! متابعة اللعب بأمان 🛡️
+          </button>
+        `;
+        showModal('penaltyModal');
+        return;
+      }
+
+      if (pData.mode === 'escape_quiz') {
+        challengeArea.classList.remove('hidden');
+        document.getElementById('pChallengePrompt').textContent = pData.quiz.prompt;
+        const qOpts = document.getElementById('pChallengeOptions');
+        qOpts.innerHTML = '';
+
+        pData.quiz.options.forEach((opt, i) => {
+          const b = document.createElement('button');
+          b.className = 'w-full text-left bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-amber-400 text-white font-bold py-2.5 px-3.5 rounded-xl text-xs sm:text-sm transition';
+          b.textContent = opt;
+          b.onclick = () => evaluateEscapeQuiz(i);
+          qOpts.appendChild(b);
+        });
+      } else if (pData.mode === 'action_challenge') {
+        actionBtns.innerHTML = `
+          <button onclick="resolveActionChallenge(true)" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-black py-3 px-3 rounded-2xl text-xs sm:text-sm transition">
+            ✅ نفذت التحدي بنجاح (إلغاء العقوبة)
+          </button>
+          <button onclick="resolveActionChallenge(false)" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-black py-3 px-3 rounded-2xl text-xs sm:text-sm transition">
+            ❌ استسلام (خصم ${pData.penalty} XP)
+          </button>
+        `;
+      } else {
+        // Direct Penalty
+        actionBtns.innerHTML = `
+          <button onclick="executeDirectPenalty()" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-black py-3 rounded-2xl transition">
+            تطبيق العقوبة (-${pData.penalty} XP) والمتابعة
+          </button>
+        `;
+      }
+
+      showModal('penaltyModal');
+    }
+
+    function evaluateEscapeQuiz(chosenIdx) {
+      if (chosenIdx === activePenalty.quiz.correct) {
+        SFX.play('correct');
+        showToast('نجوت بذكائك! إجابة صحيحة وألغيت العقوبة ⚡');
+      } else {
+        SFX.play('penalty');
+        score = Math.max(0, score - activePenalty.penalty);
+        streak = 0;
+        showToast(`للأسف إجابة خاطئة! تم خصم ${activePenalty.penalty} XP.`);
+      }
+      updateHUD();
+      closeModal('penaltyModal');
+    }
+
+    function resolveActionChallenge(success) {
+      if (success) {
+        SFX.play('correct');
+        showToast('كفو يا بطل! نفذت الحكم ونجوت من الخصم 💪');
+      } else {
+        SFX.play('penalty');
+        score = Math.max(0, score - activePenalty.penalty);
+        streak = 0;
+        showToast(`تم خصم ${activePenalty.penalty} XP.`);
+      }
+      updateHUD();
+      closeModal('penaltyModal');
+    }
+
+    function executeDirectPenalty() {
+      score = Math.max(0, score - activePenalty.penalty);
+      if (activePenalty.mode === 'direct_and_streak') {
+        streak = 0;
+      }
+      updateHUD();
+      showToast(`تم خصم ${activePenalty.penalty} XP من رصيدك!`);
+      closeModal('penaltyModal');
+    }
+
+    // =========================================================================
+    // HUD & WINNING
+    // =========================================================================
+    function updateHUD() {
+      document.getElementById('scoreDisplay').textContent = score;
+      document.getElementById('streakDisplay').textContent = streak;
+
+      const pct = Math.min(100, Math.round((score / TARGET_SCORE) * 100));
+      document.getElementById('progressPctText').textContent = `${pct}%`;
+      document.getElementById('xpProgressBar').style.width = `${pct}%`;
+
+      const shieldInd = document.getElementById('shieldIndicator');
+      if (shields > 0) {
+        document.getElementById('shieldCount').textContent = shields;
+        shieldInd.classList.remove('hidden');
+        shieldInd.classList.add('flex');
+      } else {
+        shieldInd.classList.add('hidden');
+        shieldInd.classList.remove('flex');
+      }
+
+      const dblInd = document.getElementById('doubleIndicator');
+      if (doubleNext) {
+        dblInd.classList.remove('hidden');
+        dblInd.classList.add('flex');
+      } else {
+        dblInd.classList.add('hidden');
+        dblInd.classList.remove('flex');
+      }
+    }
+
+    function checkWinCondition() {
+      if (score >= TARGET_SCORE) {
+        SFX.play('win');
+        document.getElementById('finalScoreVal').textContent = score;
+        if (typeof confetti === 'function') {
+          confetti({ particleCount: 180, spread: 95, origin: { y: 0.6 } });
+        }
+        showModal('victoryModal');
+      }
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
+      if (id === 'questionModal') checkWinCondition();
+    }
+    function showModal(id) {
+      document.getElementById(id).classList.remove('hidden');
+    }
+
+    function resetGame() {
+      closeModal('questionModal');
+      closeModal('rewardModal');
+      closeModal('penaltyModal');
+      closeModal('victoryModal');
+
+      score = 0;
+      streak = 0;
+      shields = 0;
+      doubleNext = false;
+      deck = buildDeck();
+      renderGrid();
+      showToast('تمت إعادة تشغيل ساحة التحدي! بالتوفيق ⚡');
+    }
+
+    function showToast(msg) {
+      const t = document.createElement('div');
+      t.className = 'fixed bottom-5 left-1/2 -translate-x-1/2 bg-slate-950 text-cyan-300 border border-cyan-400 px-4 py-2.5 rounded-2xl shadow-2xl text-xs sm:text-sm font-black z-50 transition-opacity duration-300 pointer-events-none';
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => {
+        t.style.opacity = '0';
+        setTimeout(() => t.remove(), 300);
+      }, 2500);
+    }
+
+    window.onload = function () {
+      deck = buildDeck();
+      renderGrid();
+    };
+  </script>
+</body>
+</html>
